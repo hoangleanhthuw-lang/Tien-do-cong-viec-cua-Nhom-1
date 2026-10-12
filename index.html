@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORVIAN Dashboard & Gantt Chart - Nhóm 1 HUB</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter & Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        accent: {
+                            purple: '#8b5cf6',
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e',
+                            sky: '#0284c7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            scroll-behavior: smooth;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+        }
+
+        .glass-card:hover {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .gantt-row:hover {
+            background-color: #f1f5f9;
+        }
+
+        .gradient-header {
+            background: linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%);
+        }
+
+        /* Notification Toast */
+        #toast {
+            transition: all 0.3s ease-in-out;
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        #toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-brand-500 selection:text-white">
+
+    <div id="app" class="flex-grow">
+        <!-- Top Navigation Header -->
+        <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                        O
+                    </div>
+                    <div>
+                        <h1 class="text-base font-bold text-slate-800 leading-tight">ORVIAN MATERIALS</h1>
+                        <p class="text-xs text-brand-600 font-medium">From Nature to Matter · HUB</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs / Controls -->
+                <div class="hidden lg:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-medium text-slate-600">
+                    <a href="#overview" class="px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-sm transition">Tổng quan</a>
+                    <a href="#gantt" class="px-3 py-1.5 rounded-lg hover:text-slate-900 transition">Sơ đồ Gantt</a>
+                    <a href="#tasks" class="px-3 py-1.5 rounded-lg hover:text-slate-900 transition">Bảng PCCV</a>
+                    <a href="#analytics" class="px-3 py-1.5 rounded-lg hover:text-slate-900 transition">Phân tích</a>
+                    <a href="#members" class="px-3 py-1.5 rounded-lg hover:text-slate-900 transition">Thành viên</a>
+                    <a href="#reviews" class="px-3 py-1.5 rounded-lg hover:text-slate-900 transition">Đánh giá</a>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span> Hoàn tất 100%
+                    </span>
+
+                    <button onclick="togglePresentationMode()" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition text-xs font-semibold flex items-center gap-1.5" title="Chế độ Thuyết trình">
+                        <i class="fa-solid fa-expand"></i>
+                        <span class="hidden sm:inline">Toàn màn hình</span>
+                    </button>
+
+                    <button onclick="window.print()" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="In báo cáo">
+                        <i class="fa-solid fa-print"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Hero Header Section -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+            <div class="relative overflow-hidden rounded-2xl gradient-header text-white p-6 sm:p-8 shadow-xl">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute right-1/3 -top-10 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+                    <div class="lg:col-span-2 space-y-3">
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span class="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 font-medium">Trường Đại học Ngân hàng TP. Hồ Chí Minh</span>
+                            <span class="bg-teal-500/30 text-teal-200 px-3 py-1 rounded-full border border-teal-400/30 font-medium">Chương trình Tiếng Anh bán phần</span>
+                            <span class="bg-indigo-500/30 text-indigo-200 px-3 py-1 rounded-full border border-indigo-400/30 font-medium">Lớp L09 — Ngành Tài chính – Ngân hàng</span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Dự án: ORVIAN MATERIALS FROM NATURE TO MATTER</h2>
+                        <p class="text-slate-300 text-sm font-medium italic">"Khẩu hiệu: From Nature to Matter" · Đợt 4 NH 2025–2026</p>
+                        
+                        <div class="pt-2 flex flex-wrap gap-4 text-xs text-slate-200">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-user-tie text-teal-400"></i>
+                                <span>GVHD: <strong class="text-white">PGS.TS Nguyễn Hoàng Chung</strong></span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-calendar-days text-teal-400"></i>
+                                <span>Thời gian: <strong class="text-white">03/09/2026 - 13/10/2026 (6 tuần)</strong></span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-users text-teal-400"></i>
+                                <span>Nhóm 1: <strong class="text-white">5 Thành viên</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Quick Badge -->
+                    <div class="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-4 flex flex-col justify-between space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-xs text-slate-300 block uppercase tracking-wider font-semibold">Trạng thái hiện tại</span>
+                                <span class="text-lg font-bold text-emerald-300 flex items-center gap-2 mt-0.5">
+                                    <i class="fa-solid fa-circle-check"></i> Đã hoàn tất toàn bộ lộ trình
+                                </span>
+                            </div>
+                            <span class="text-xs bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-1 rounded-lg border border-emerald-400/30">100% Complete</span>
+                        </div>
+                        <div class="text-xs text-slate-300 border-t border-white/10 pt-2 flex justify-between">
+                            <span>Hạn chót gần nhất: <strong class="text-white">Không còn</strong></span>
+                            <span>Đã kết thúc: <strong class="text-white">6 tuần</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Key Metrics Cards -->
+        <section id="overview" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div class="glass-card rounded-2xl p-4 transition-all duration-200">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tổng công việc</span>
+                        <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex items-baseline">
+                        <span class="text-2xl font-bold text-slate-800">23</span>
+                        <span class="ml-1 text-xs text-slate-500">hạng mục</span>
+                    </div>
+                    <div class="mt-2 text-xs text-emerald-600 font-medium flex items-center">
+                        <i class="fa-solid fa-arrow-up mr-1"></i> 100% Bao phủ Phụ lục
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 transition-all duration-200">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Đã hoàn thành</span>
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex items-baseline">
+                        <span class="text-2xl font-bold text-emerald-600">23</span>
+                        <span class="ml-1 text-xs text-slate-500">/ 23 tasks</span>
+                    </div>
+                    <div class="mt-2 text-xs text-emerald-600 font-medium">
+                        Đạt tiến độ 100%
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 transition-all duration-200">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Thành viên</span>
+                        <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex items-baseline">
+                        <span class="text-2xl font-bold text-slate-800">5</span>
+                        <span class="ml-1 text-xs text-slate-500">sinh viên</span>
+                    </div>
+                    <div class="mt-2 text-xs text-indigo-600 font-medium">
+                        Đều hoàn thành 100%
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 transition-all duration-200">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Thời gian</span>
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex items-baseline">
+                        <span class="text-2xl font-bold text-slate-800">6</span>
+                        <span class="ml-1 text-xs text-slate-500">tuần thực hiện</span>
+                    </div>
+                    <div class="mt-2 text-xs text-amber-600 font-medium">
+                        03/09 - 13/10/2026
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 transition-all duration-200 col-span-2 md:col-span-4 lg:col-span-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Đánh giá chung</span>
+                        <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-star"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex items-baseline">
+                        <span class="text-2xl font-bold text-purple-600">5.0</span>
+                        <span class="ml-1 text-xs text-slate-500">/ 5.0 Xuất sắc</span>
+                    </div>
+                    <div class="mt-2 text-xs text-purple-600 font-medium">
+                        100% Đúng hạn & Tốt
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Gantt Chart Section -->
+        <section id="gantt" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-gantt text-brand-600"></i> Sơ đồ Gantt Toàn đợt (03/09/2026 - 13/10/2026)
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Sơ đồ thể hiện timeline thực hiện các hạng mục công việc chính theo các mốc tuần</p>
+                    </div>
+
+                    <!-- Gantt Legend -->
+                    <div class="flex items-center space-x-4 text-xs font-medium">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                            <span class="text-slate-600">Hoàn thành</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                            <span class="text-slate-600">Chốt / Nghiệm thu</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <span class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span>
+                            <span class="text-slate-600">Tổng hợp / AI</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gantt Chart Timeline -->
+                <div class="mt-6 overflow-x-auto">
+                    <div class="min-w-[850px]">
+                        <!-- Timeline Header -->
+                        <div class="grid grid-cols-12 gap-2 text-xs font-bold text-slate-600 bg-slate-100 p-3 rounded-xl mb-3 text-center">
+                            <div class="col-span-3 text-left pl-2">Hạng mục công việc</div>
+                            <div class="col-span-2 text-left">Phụ trách</div>
+                            <div class="col-span-1">Tuần 1<br><span class="text-[10px] font-normal text-slate-400">03-09/09</span></div>
+                            <div class="col-span-1">Tuần 2<br><span class="text-[10px] font-normal text-slate-400">10-16/09</span></div>
+                            <div class="col-span-1">Tuần 3<br><span class="text-[10px] font-normal text-slate-400">17-23/09</span></div>
+                            <div class="col-span-1">Tuần 4<br><span class="text-[10px] font-normal text-slate-400">24-30/09</span></div>
+                            <div class="col-span-1">Tuần 5<br><span class="text-[10px] font-normal text-slate-400">01-07/10</span></div>
+                            <div class="col-span-2">Tuần 6 & Chốt<br><span class="text-[10px] font-normal text-slate-400">08-13/10</span></div>
+                        </div>
+
+                        <!-- Gantt Rows -->
+                        <div class="space-y-2 text-xs">
+                            <!-- Phase 1 -->
+                            <div class="p-2 bg-slate-50 rounded-lg font-bold text-brand-700 uppercase tracking-wider text-[11px] flex items-center justify-between">
+                                <span>Phase 1: Khởi động & Thống nhất đề tài</span>
+                                <span class="text-[10px] font-normal text-slate-500">03/09 - 05/09</span>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Đề xuất ý tưởng & Chốt đề tài</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">Tất cả (ALL)</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="w-[20%] h-6 bg-emerald-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        03/09 - 05/09
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phase 2 -->
+                            <div class="p-2 bg-slate-50 rounded-lg font-bold text-brand-700 uppercase tracking-wider text-[11px] flex items-center justify-between mt-2">
+                                <span>Phase 2: Biên soạn các Chương & PCCV Word</span>
+                                <span class="text-[10px] font-normal text-slate-500">14/09 - 01/10</span>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Chương 1 + 8 + Tổng hợp</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-teal-100 text-teal-800 font-medium">Anh Thư</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[15%] w-[25%] h-6 bg-emerald-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        14/09 - 20/09
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Chương 2 + 4</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-medium">Thái Hùng</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[15%] w-[25%] h-6 bg-emerald-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        20/09
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Chương 3</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-medium">Gia Linh</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[20%] w-[35%] h-6 bg-emerald-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        20/09 - 01/10
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Chương 5</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-medium">Bích Trâm</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[20%] w-[35%] h-6 bg-emerald-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        01/10
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Chương 6 + 7</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">Minh Trí</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[20%] w-[35%] h-6 bg-emerald-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        20/09 - 01/10
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phase 3 -->
+                            <div class="p-2 bg-slate-50 rounded-lg font-bold text-brand-700 uppercase tracking-wider text-[11px] flex items-center justify-between mt-2">
+                                <span>Phase 3: Hoàn thiện File Word, PDF, Excel & Công cụ AI</span>
+                                <span class="text-[10px] font-normal text-slate-500">02/10 - 10/10</span>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">PCCV Excel & Gemini/ChatGPT Prompts</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">Gia Linh, Trâm</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[50%] w-[30%] h-6 bg-purple-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        02/10 - 08/10
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Kiểm tra Nội dung & Chỉnh sửa Word/PDF</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">Anh Thư, Thái Hùng, ALL</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[60%] w-[25%] h-6 bg-emerald-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        06/10 - 10/10
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phase 4 -->
+                            <div class="p-2 bg-slate-50 rounded-lg font-bold text-brand-700 uppercase tracking-wider text-[11px] flex items-center justify-between mt-2">
+                                <span>Phase 4: Chốt Sản phẩm Truyền thông, Website & Python</span>
+                                <span class="text-[10px] font-normal text-slate-500">11/10 - 13/10</span>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Video thuyết trình, Pitch Desk, Website, Python</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">Hùng, Trí, Trâm</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[80%] w-[20%] h-6 bg-amber-500 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        11/10 - 13/10
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center p-2 rounded-lg gantt-row transition">
+                                <div class="col-span-3 font-semibold text-slate-800 pl-2">Video QC (2 video), Podcast, Gantt Map, Summary</div>
+                                <div class="col-span-2 text-slate-600"><span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">Trâm, Trí, Hùng, Thư</span></div>
+                                <div class="col-span-7 relative h-7 flex items-center">
+                                    <div class="ml-[85%] w-[15%] h-6 bg-emerald-600 text-white rounded-md flex items-center justify-center text-[10px] font-bold shadow-sm">
+                                        13/10 (Final)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Work Assignment Table Section (PCCV) -->
+        <section id="tasks" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-table-list text-brand-600"></i> Chi tiết Phân Công Công Việc (PCCV theo Phụ lục)
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Bảng tổng hợp chi tiết 23 hạng mục công việc đã thực hiện của Nhóm 1</p>
+                    </div>
+
+                    <!-- Search, Filter & CSV Export -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative">
+                            <input type="text" id="taskSearch" placeholder="Tìm công việc hoặc thành viên..." 
+                                   class="pl-9 pr-4 py-2 bg-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 w-56 text-slate-700">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        </div>
+
+                        <select id="phaseFilter" class="bg-slate-100 text-xs rounded-xl px-3 py-2 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">Tất cả giai đoạn</option>
+                            <option value="P1">Phase 1 (Khởi động)</option>
+                            <option value="P2">Phase 2 (Các chương Word)</option>
+                            <option value="P3">Phase 3 (Sửa Word, Excel, AI)</option>
+                            <option value="P4">Phase 4 (Sản phẩm & Media)</option>
+                        </select>
+
+                        <select id="memberFilter" class="bg-slate-100 text-xs rounded-xl px-3 py-2 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">Tất cả thành viên</option>
+                            <option value="Anh Thư">Hoàng Lê Anh Thư</option>
+                            <option value="Gia Linh">Nguyễn Đặng Gia Linh</option>
+                            <option value="Bích Trâm">Lê Thị Bích Trâm</option>
+                            <option value="Thái Hùng">Phan Thái Hùng</option>
+                            <option value="Minh Trí">Nguyễn Minh Trí</option>
+                        </select>
+
+                        <button onclick="exportToCSV()" class="px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel"></i> Xuất CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PCCV Table -->
+                <div class="mt-4 overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-100/80 text-slate-600 font-bold uppercase tracking-wider text-[11px] rounded-lg">
+                                <th class="p-3 rounded-l-lg">STT</th>
+                                <th class="p-3">Việc cần làm</th>
+                                <th class="p-3">Chủ sở hữu</th>
+                                <th class="p-3">Ngày đến hạn</th>
+                                <th class="p-3">Trạng thái</th>
+                                <th class="p-3 rounded-r-lg text-right">Mức độ hoàn thành</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pccvTableBody" class="divide-y divide-slate-100 font-medium">
+                            <!-- Populated dynamically by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visual Analytics Section -->
+        <section id="analytics" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-brand-600"></i> Phân tích Trực quan Tiến độ & Đóng góp
+                </h3>
+                <p class="text-xs text-slate-500">Biểu đồ thống kê chi tiết số lượng công việc, tốc độ hoàn thành và cân bằng tải giữa các thành viên</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Chart 1: Donut Distribution -->
+                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Phân bổ Số lượng Công việc</h4>
+                        <p class="text-sm font-bold text-slate-800 mt-1">Tỷ lệ công việc phụ trách theo thành viên</p>
+                    </div>
+                    <div class="relative my-4 flex items-center justify-center h-56">
+                        <canvas id="taskDistributionChart"></canvas>
+                    </div>
+                    <div class="text-[11px] text-slate-500 text-center border-t border-slate-100 pt-2">
+                        Tải công việc được phân chia cân bằng theo sở trường chuyên môn
+                    </div>
+                </div>
+
+                <!-- Chart 2: Completion Bar -->
+                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Tỷ lệ Hoàn thành</h4>
+                        <p class="text-sm font-bold text-slate-800 mt-1">Tiến độ thực hiện công việc từng cá nhân</p>
+                    </div>
+                    <div class="relative my-4 flex items-center justify-center h-56">
+                        <canvas id="memberCompletionChart"></canvas>
+                    </div>
+                    <div class="text-[11px] text-slate-500 text-center border-t border-slate-100 pt-2">
+                        100% Thành viên hoàn thành xuất sắc các task được phân công
+                    </div>
+                </div>
+
+                <!-- Chart 3: Progress Line over Time -->
+                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between col-span-1 md:col-span-2 lg:col-span-1">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Tốc độ Tiến độ Lộ trình</h4>
+                        <p class="text-sm font-bold text-slate-800 mt-1">Tích lũy khối lượng hoàn thành (03/09 - 13/10)</p>
+                    </div>
+                    <div class="relative my-4 flex items-center justify-center h-56">
+                        <canvas id="timelineProgressChart"></canvas>
+                    </div>
+                    <div class="text-[11px] text-slate-500 text-center border-t border-slate-100 pt-2">
+                        Dự án đạt mốc 100% hoàn hảo đúng ngày 13/10/2026
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team Members Section -->
+        <section id="members" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="mb-6">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear text-brand-600"></i> Tiến độ & Thông tin Thành viên Nhóm 1
+                </h3>
+                <p class="text-xs text-slate-500">Thông tin cá nhân, mã số sinh viên, vai trò cụ thể và mức độ hoàn thành công việc</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="memberCardsContainer">
+                <!-- Member cards dynamically loaded -->
+            </div>
+        </section>
+
+        <!-- Evaluation & Feedback Section -->
+        <section id="reviews" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 mb-12">
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-award text-brand-600"></i> Nhận xét & Đánh giá Đóng góp Thành viên
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Tổng hợp đánh giá chất lượng công việc, tinh thần trách nhiệm và thái độ hợp tác</p>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs bg-amber-50 text-amber-800 px-3 py-1.5 rounded-xl border border-amber-200 font-semibold">
+                        <i class="fa-solid fa-star text-amber-500"></i>
+                        <span>Đánh giá chung: 100% Đạt loại XUẤT SẮC (5.0/5.0)</span>
+                    </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+                    <!-- Radar Chart for Team Capabilities -->
+                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-col items-center justify-center">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Chỉ số Năng lực & Đóng góp Nhóm</h4>
+                        <div class="w-full h-64 relative flex items-center justify-center">
+                            <canvas id="teamRadarChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Member Reviews List -->
+                    <div class="lg:col-span-2 space-y-4" id="memberReviewsContainer">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Notification Toast Popup -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 z-50">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+        <span id="toastMsg">Đã sao chép vào bộ nhớ tạm!</span>
+    </div>
+
+    <!-- Footer Section -->
+    <footer class="bg-slate-900 text-slate-400 py-8 border-t border-slate-800 text-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">O</div>
+                <div>
+                    <p class="text-slate-200 font-bold">ORVIAN MATERIALS FROM NATURE TO MATTER</p>
+                    <p class="text-slate-500 text-[11px]">Trường Đại học Ngân hàng TP. Hồ Chí Minh · GVHD: PGS.TS Nguyễn Hoàng Chung</p>
+                </div>
+            </div>
+            <div class="text-center sm:text-right text-slate-500">
+                <p>Lớp L09 — Ngành Tài chính - Ngân hàng · Đợt 4 NH 2025–2026</p>
+                <p class="text-[11px] mt-0.5">Báo cáo Tiến độ Nhóm 1 · Cập nhật ngày 13/10/2026</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Member Data
+        const memberData = [
+            {
+                id: 1,
+                name: "Hoàng Lê Anh Thư",
+                mssv: "050112240236",
+                role: "Trưởng nhóm / Leader",
+                class: "L09",
+                major: "Tài chính – Ngân hàng",
+                color: "teal",
+                tasksCount: 4,
+                completion: 100,
+                tasksAssigned: ["PCCV Chương 1 + 8 + Tổng hợp", "CHỈNH SỬA TOÀN BỘ WORD", "GANTT MAP", "Đề xuất & Chốt đề tài"],
+                review: "Hoàn thành xuất sắc vai trò Trưởng nhóm. Lập kế hoạch chi tiết, phân công công việc khoa học, quản lý tiến độ sát sao và chỉnh sửa toàn bộ file Word đạt chuẩn chỉn chu.",
+                rating: 5.0
+            },
+            {
+                id: 2,
+                name: "Nguyễn Đặng Gia Linh",
+                mssv: "050112240653",
+                role: "Thành viên / Content & AI",
+                class: "L09",
+                major: "Tài chính – Ngân hàng",
+                color: "purple",
+                tasksCount: 5,
+                completion: 100,
+                tasksAssigned: ["Chương 3", "PCCV EXCEL", "GEMINI (INFOGRAPHIC)", "GEMINI PROMPT", "CHATGPT PROMPT"],
+                review: "Chủ động sáng tạo trong ứng dụng công cụ AI (Gemini, ChatGPT Prompts), hoàn thành xuất sắc nội dung Chương 3 và thiết kế Infographic sinh động, tính thẩm mỹ cao.",
+                rating: 5.0
+            },
+            {
+                id: 3,
+                name: "Lê Thị Bích Trâm",
+                mssv: "050112240266",
+                role: "Thành viên / Tech & Media",
+                class: "L09",
+                major: "Tài chính – Ngân hàng",
+                color: "rose",
+                tasksCount: 4,
+                completion: 100,
+                tasksAssigned: ["Chương 5", "PCCV EXCEL", "PYTHON", "VIDEO QUẢNG CÁO (2 video)"],
+                review: "Kỹ năng kỹ thuật và lập trình Python tốt, hoàn thành đúng hạn các chương nội dung và tích cực tham gia sản xuất 2 Video quảng cáo chất lượng cao.",
+                rating: 5.0
+            },
+            {
+                id: 4,
+                name: "Phan Thái Hùng",
+                mssv: "050112240075",
+                role: "Thành viên / Production & Design",
+                class: "L09",
+                major: "Tài chính – Ngân hàng",
+                color: "indigo",
+                tasksCount: 5,
+                completion: 100,
+                tasksAssigned: ["Chương 2 + 4", "PDF", "VIDEO THUYẾT TRÌNH", "SUMMARY", "PODCAST"],
+                review: "Tinh thần trách nhiệm rất cao. Đóng góp tích cực ở nhiều định dạng sản phẩm: Video thuyết trình, Podcast truyền thông, File Summary và định dạng PDF hoàn hảo.",
+                rating: 5.0
+            },
+            {
+                id: 5,
+                name: "Nguyễn Minh Trí",
+                mssv: "050112241071",
+                role: "Thành viên / Web & Pitching",
+                class: "L09",
+                major: "Tài chính – Ngân hàng",
+                color: "amber",
+                tasksCount: 4,
+                completion: 100,
+                tasksAssigned: ["Chương 6 + 7", "WEBSITE", "PITCH DESK", "VIDEO QUẢNG CÁO (2 video)"],
+                review: "Năng nổ, linh hoạt, đảm nhận kỹ thuật lập trình Website, hoàn thiện Pitch Desk ấn tượng và phối hợp nhịp nhàng dựng Video quảng cáo xuất sắc.",
+                rating: 5.0
+            }
+        ];
+
+        // PCCV Tasks List (23 Items)
+        const pccvList = [
+            { id: 1, phase: "P1", task: "Đề xuất các ý tưởng về đề tài", status: "Đã hoàn thành", owner: "ALL", deadline: "03/09/2026" },
+            { id: 2, phase: "P1", task: "Chốt đề tài", status: "Đã hoàn thành", owner: "ALL", deadline: "05/09/2026" },
+            { id: 3, phase: "P1", task: "PCCV", status: "Đã hoàn thành", owner: "ALL", deadline: "14/09/2026" },
+            { id: 4, phase: "P2", task: "Chương 1 + 8 + Tổng hợp, chỉnh sửa", status: "Đã hoàn thành", owner: "Anh Thư", deadline: "20/09/2026" },
+            { id: 5, phase: "P2", task: "Chương 3", status: "Đã hoàn thành", owner: "Gia Linh", deadline: "01/10/2026" },
+            { id: 6, phase: "P2", task: "Chương 6 + 7", status: "Đã hoàn thành", owner: "Minh Trí", deadline: "20/09/2026" },
+            { id: 7, phase: "P2", task: "Chương 2 + 4", status: "Đã hoàn thành", owner: "Thái Hùng", deadline: "20/09/2026" },
+            { id: 8, phase: "P2", task: "Chương 5", status: "Đã hoàn thành", owner: "Bích Trâm", deadline: "01/10/2026" },
+            { id: 9, phase: "P3", task: "PCCV EXCEL", status: "Đã hoàn thành", owner: "Bích Trâm, Gia Linh", deadline: "02/10/2026" },
+            { id: 10, phase: "P3", task: "KIỂM TRA/ CHỈNH SỬA NỘI DUNG WORD", status: "Đã hoàn thành", owner: "ALL", deadline: "09/10/2026" },
+            { id: 11, phase: "P3", task: "CHỈNH SỬA TOÀN BỘ WORD", status: "Đã hoàn thành", owner: "Anh Thư", deadline: "20h 06/10/2026" },
+            { id: 12, phase: "P3", task: "PDF", status: "Đã hoàn thành", owner: "Thái Hùng", deadline: "10/10/2026" },
+            { id: 13, phase: "P4", task: "VIDEO THUYẾT TRÌNH", status: "Đã hoàn thành", owner: "Thái Hùng", deadline: "11/10/2026" },
+            { id: 14, phase: "P4", task: "PITCH DESK", status: "Đã hoàn thành", owner: "Minh Trí", deadline: "13/10/2026" },
+            { id: 15, phase: "P4", task: "PYTHON", status: "Đã hoàn thành", owner: "Bích Trâm", deadline: "13/10/2026" },
+            { id: 16, phase: "P4", task: "WEBSITE", status: "Đã hoàn thành", owner: "Minh Trí", deadline: "08/10/2026" },
+            { id: 17, phase: "P3", task: "GEMINI (INFOGRAPHIC)", status: "Đã hoàn thành", owner: "Gia Linh", deadline: "13/10/2026" },
+            { id: 18, phase: "P3", task: "GEMINI PROMPT", status: "Đã hoàn thành", owner: "Gia Linh", deadline: "08/10/2026" },
+            { id: 19, phase: "P3", task: "CHATGPT PROMPT", status: "Đã hoàn thành", owner: "Gia Linh", deadline: "13/10/2026" },
+            { id: 20, phase: "P4", task: "GANTT MAP", status: "Đã hoàn thành", owner: "Anh Thư", deadline: "13/10/2026" },
+            { id: 21, phase: "P4", task: "SUMMARY", status: "Đã hoàn thành", owner: "Thái Hùng", deadline: "13/10/2026" },
+            { id: 22, phase: "P4", task: "VIDEO QUẢNG CÁO (2 video)", status: "Đã hoàn thành", owner: "Trâm, Trí", deadline: "13/10/2026" },
+            { id: 23, phase: "P4", task: "PODCAST", status: "Đã hoàn thành", owner: "Thái Hùng", deadline: "13/10/2026" }
+        ];
+
+        function renderTable(filterMember = 'ALL', filterPhase = 'ALL', searchKeyword = '') {
+            const tbody = document.getElementById('pccvTableBody');
+            tbody.innerHTML = '';
+
+            const filtered = pccvList.filter(item => {
+                const matchesMember = filterMember === 'ALL' || item.owner.toLowerCase().includes(filterMember.toLowerCase()) || item.owner === 'ALL';
+                const matchesPhase = filterPhase === 'ALL' || item.phase === filterPhase;
+                const matchesSearch = item.task.toLowerCase().includes(searchKeyword.toLowerCase()) || item.owner.toLowerCase().includes(searchKeyword.toLowerCase());
+                return matchesMember && matchesPhase && matchesSearch;
+            });
+
+            filtered.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition duration-150";
+
+                let ownerBadgeColor = "bg-slate-100 text-slate-700";
+                if(item.owner.includes("Anh Thư")) ownerBadgeColor = "bg-teal-100 text-teal-800";
+                else if(item.owner.includes("Gia Linh")) ownerBadgeColor = "bg-purple-100 text-purple-800";
+                else if(item.owner.includes("Bích Trâm")) ownerBadgeColor = "bg-rose-100 text-rose-800";
+                else if(item.owner.includes("Thái Hùng")) ownerBadgeColor = "bg-indigo-100 text-indigo-800";
+                else if(item.owner.includes("Minh Trí")) ownerBadgeColor = "bg-amber-100 text-amber-800";
+                else if(item.owner === "ALL") ownerBadgeColor = "bg-emerald-100 text-emerald-800 font-bold";
+
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-400 font-semibold">${item.id}</td>
+                    <td class="p-3 font-semibold text-slate-800">${item.task}</td>
+                    <td class="p-3"><span class="px-2.5 py-1 rounded-lg text-[11px] ${ownerBadgeColor}">${item.owner}</span></td>
+                    <td class="p-3 text-slate-600 font-medium">${item.deadline}</td>
+                    <td class="p-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-800">
+                            <i class="fa-solid fa-check-circle mr-1 text-emerald-500"></i> ${item.status}
+                        </span>
+                    </td>
+                    <td class="p-3 text-right">
+                        <div class="flex items-center justify-end space-x-2">
+                            <span class="font-bold text-emerald-600">100%</span>
+                            <div class="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-emerald-500 h-1.5 rounded-full w-full"></div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderMemberCards() {
+            const container = document.getElementById('memberCardsContainer');
+            container.innerHTML = '';
+
+            memberData.forEach(m => {
+                const card = document.createElement('div');
+                card.className = "glass-card rounded-2xl p-5 flex flex-col justify-between hover:-translate-y-1 transition duration-200";
+
+                card.innerHTML = `
+                    <div>
+                        <div>
+                            <h4 class="text-base font-bold text-slate-800">${m.name}</h4>
+                            <p class="text-xs text-brand-600 font-semibold mt-0.5">${m.role}</p>
+                            <p class="text-[11px] text-slate-400 mt-0.5">MSSV: <span class="font-mono text-slate-600">${m.mssv}</span></p>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-[11px]">
+                            <div class="bg-slate-50 p-2 rounded-lg">
+                                <span class="text-slate-400 block">Lớp & Ngành:</span>
+                                <span class="font-semibold text-slate-700">${m.class} · TC-NH</span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-lg">
+                                <span class="text-slate-400 block">Hạng mục chính:</span>
+                                <span class="font-semibold text-brand-700">${m.tasksCount} Tasks phụ trách</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <span class="text-[11px] font-semibold text-slate-500 block mb-1">Công việc đảm nhận:</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${m.tasksAssigned.map(t => `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 border border-slate-200/60">${t}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-3 border-t border-slate-100">
+                        <div class="flex justify-between items-center text-xs mb-1">
+                            <span class="font-semibold text-slate-600">Tiến độ hoàn thành:</span>
+                            <span class="font-bold text-emerald-600">100%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div class="bg-gradient-to-r from-teal-500 to-emerald-500 h-2 rounded-full w-full"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderMemberReviews() {
+            const container = document.getElementById('memberReviewsContainer');
+            container.innerHTML = '';
+
+            memberData.forEach(m => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-50/80 rounded-xl p-4 border border-slate-200/70 hover:bg-white transition duration-200";
+
+                div.innerHTML = `
+                    <div class="flex items-start justify-between">
